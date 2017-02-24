@@ -25,6 +25,10 @@ import uk.ac.ebi.interpro.scan.management.model.implementations.panther.PantherN
 import uk.ac.ebi.interpro.scan.model.SignatureLibrary;
 import uk.ac.ebi.interpro.scan.model.SignatureLibraryRelease;
 
+import java.io.FilePermission;
+import java.security.AccessController;
+
+
 import java.io.File;
 import java.io.IOException;
 import java.net.DatagramSocket;
@@ -166,7 +170,21 @@ public class Run extends AbstractI5Runner {
                     if (LOGGER.isDebugEnabled()) {
                         LOGGER.debug(" Creating the  userInterproscan5Properties file : " + userInterproscan5Properties);
                     }
-                    userInterproscan5PropertiesFile.createNewFile();
+                    try {
+                        userInterproscan5PropertiesFile.createNewFile();
+                    }catch (IOException e){
+                        LOGGER.warn("Unable to access  " + userInterproscan5Properties);
+                        //check the permisions in the directory of user.home
+                        try {
+                            String actions = "read,write";
+                            AccessController.checkPermission(new FilePermission(System.getProperty("user.home"), actions));
+//                            System.out.println("You have read/write permition to use : " + System.getProperty("user.home"));
+                        } catch (SecurityException se) {
+                            LOGGER.warn("You don't have read/write permition to use : " + System.getProperty("user.home"));
+                        }
+
+                        LOGGER.warn(e);
+                    }
                 }
 
                 //Deal with user supplied config file from the command line
@@ -354,7 +372,7 @@ public class Run extends AbstractI5Runner {
             LOGGER.fatal("Exception thrown when parsing command line arguments.  Error message: " + exp.getMessage());
             printHelp(COMMAND_LINE_OPTIONS_FOR_HELP);
             System.exit(1);
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             System.exit(1);
         } finally {
